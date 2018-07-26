@@ -23,7 +23,7 @@ const server = http.createServer((req, res) => {
         let q_i = parseInt(srvUrl.query['i']);
         let a, b; [a, b] = [0, 1];
 
-        if (q_i < 0) {
+        if (q_i < 0 || !Number.isInteger(q_i)) {
             res.statusCode = 400;
             res.end();
             return;
