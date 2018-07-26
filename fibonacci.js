@@ -21,7 +21,7 @@ const server = http.createServer((req, res) => {
 
     if (typeof srvUrl.query === 'object' && 'i' in srvUrl.query) {
         let q_i = parseInt(srvUrl.query['i']);
-        let a, b; [a, b] = [0, 1];
+        let a = 0, b = 1;
 
         if (q_i < 0 || !Number.isInteger(q_i)) {
             res.statusCode = 400;
