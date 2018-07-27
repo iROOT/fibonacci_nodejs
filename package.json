@@ -1,8 +1,10 @@
 {
   "name": "fibonacci",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "main": "app.js",
   "private": true,
   "scripts": {
-    "start": "node fibonacci.js"
+    "start": "node app.js server",
+  },
   }
 }
