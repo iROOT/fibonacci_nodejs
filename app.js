@@ -1,3 +1,10 @@
+const http = require('http');
+const url = require('url');
+
+const hostname = '127.0.0.1';
+const port = 3000;
+
+
 function fibonacci(n) {
     let a = 0, b = 1;
 
@@ -42,55 +49,46 @@ function getResult(funcName, n) {
         throw URIError;
 }
 
-function server() {
-    const http = require('http');
-    const url = require('url');
+this.server = http.createServer((req, res) => {
+    if (req.url === '/favicon.ico') {
+        res.writeHead(200, {'Content-Type': 'image/x-icon'});
+        res.end();
+        return;
+    }
 
-    const hostname = '127.0.0.1';
-    const port = 3000;
+    try {
+        const srvUrl = url.parse(req.url, true);
 
-    const server = http.createServer((req, res) => {
-        if (req.url === '/favicon.ico') {
-            res.writeHead(200, {'Content-Type': 'image/x-icon'});
+        if (typeof srvUrl.query === 'object' && 'i' in srvUrl.query) {
+            let n = parseInt(srvUrl.query['i'], 10);
+
+            let result = getResult(srvUrl.pathname.slice(1), n).toString();
+
+            res.writeHead(200, {'Content-Type': 'text/plain'});
+            res.end(result);
+        } else {
+            throw TypeError;
+        }
+    } catch (e) {
+        if (e.name === "RangeError") {
+            res.statusCode = 400;
             res.end();
-            return;
+        } else if (e.name === "URIError") {
+            res.statusCode = 404;
+            res.end();
+        } else if (e.name === "TypeError") {
+            res.statusCode = 500;
+            res.end();
         }
+    }
+});
 
-        try {
-            const srvUrl = url.parse(req.url, true);
 
-            if (typeof srvUrl.query === 'object' && 'i' in srvUrl.query) {
-                let n = parseInt(srvUrl.query['i'], 10);
-
-                let result = getResult(srvUrl.pathname.slice(1), n).toString();
-
-                res.writeHead(200, {'Content-Type': 'text/plain'});
-                res.end(result);
-            } else {
-                throw TypeError;
-            }
-        } catch (e) {
-            if (e.name === "RangeError") {
-                res.statusCode = 400;
-                res.end();
-            } else if (e.name === "URIError") {
-                res.statusCode = 404;
-                res.end();
-            } else if (e.name === "TypeError") {
-                res.statusCode = 500;
-                res.end();
-            }
-        }
-    });
-
-    server.listen(port, hostname, () => {
+if (process.argv[2] === "server") {
+    this.server.listen(port, hostname, () => {
         console.log(`Server running at http://${hostname}:${port}/`);
     });
-}
-
-if (process.argv[2] === "server")
-    server();
-else {
+} else if (process.argv[2] in ['fibonacci', 'factorial']) {
     try {
         console.log(getResult(process.argv[2], parseInt(process.argv[3], 10)));
     } catch (e) {
@@ -102,3 +100,12 @@ else {
             console.log("Invalid function argument");
     }
 }
+
+
+module.exports.listen = function () {
+    this.server.listen.apply(this.server, arguments);
+};
+
+module.exports.close = function (callback) {
+    this.server.close(callback);
+};

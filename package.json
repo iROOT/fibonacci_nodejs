@@ -5,6 +5,9 @@
   "private": true,
   "scripts": {
     "start": "node app.js server",
+    "test": "node ./node_modules/mocha/bin/mocha"
   },
+  "devDependencies": {
+    "mocha": "^5.2.0"
   }
 }
