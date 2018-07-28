@@ -1,9 +1,7 @@
 const server = require('../app'),
-    mocha = require('mocha'),
+    {describe, before, after, it} = require('mocha'),
     assert = require('assert'),
     http = require('http');
-
-[describe, before, after, it] = [mocha.describe, mocha.before, mocha.after, mocha.it];
 
 describe('server', function () {
     before(function () {
