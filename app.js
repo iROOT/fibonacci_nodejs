@@ -8,11 +8,13 @@ const port = 3000;
 function fibonacci(n) {
     let a = 0, b = 1;
 
-    if (n === 0 || n === 1)
+    if (n === 0 || n === 1) {
         return n;
+    }
 
-    for (let i = 2; i <= n; ++i)
+    for (let i = 2; i <= n; ++i) {
         [a, b] = [b, a + b];
+    }
 
     return b;
 }
@@ -20,32 +22,37 @@ function fibonacci(n) {
 function factorial(n) {
     let mul = 1;
 
-    if (n !== 0)
-        for (let i = 1; i <= n; ++i)
+    if (n !== 0) {
+        for (let i = 1; i <= n; ++i) {
             mul *= i
+        }
+    }
 
     return mul;
 }
 
 function getResult(funcName, n) {
-    if (!Number.isInteger(n))
+    if (!Number.isInteger(n)) {
         throw TypeError;
-    else if (n < 0)
+    } else if (n < 0) {
         throw RangeError;
+    }
 
-    if (funcName === 'fibonacci')
-        if (n > 1476)
+    if (funcName === 'fibonacci') {
+        if (n > 1476) {
             return Infinity;
-        else
+        } else {
             return fibonacci(n);
-
-    else if (funcName === 'factorial')
-        if (n > 170)
+        }
+    } else if (funcName === 'factorial') {
+        if (n > 170) {
             return Infinity;
-        else
+        } else {
             return factorial(n);
-    else
+        }
+    } else {
         throw URIError;
+    }
 }
 
 this.server = http.createServer((req, res) => {
@@ -91,12 +98,13 @@ if (process.argv[2] === "server") {
     try {
         console.log(getResult(process.argv[2], parseInt(process.argv[3], 10)));
     } catch (e) {
-        if (e.name === "RangeError")
+        if (e.name === "RangeError") {
             console.log("Input value is negative");
-        else if (e.name === "URIError")
+        } else if (e.name === "URIError") {
             console.log("Function not found");
-        else if (e.name === "TypeError")
+        } else if (e.name === "TypeError") {
             console.log("Invalid function argument");
+        }
     }
 }
 
