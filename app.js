@@ -1,6 +1,8 @@
 const http = require('http');
 const url = require('url');
 
+const addon = require('bindings')('addon');
+
 const hostname = '127.0.0.1';
 const port = 3000;
 
@@ -37,13 +39,13 @@ function getResult(funcName, n) {
         if (n > 1476)
             return Infinity;
         else
-            return fibonacci(n);
+            return addon.fibonacci(n);
 
     else if (funcName === 'factorial')
         if (n > 170)
             return Infinity;
         else
-            return factorial(n);
+            return addon.factorial(n);
     else
         throw URIError;
 }
