@@ -8,8 +8,8 @@ const port = 3000;
 function fibonacci(n) {
     let a = 0, b = 1;
 
-    if (0 <= n && n <= 1)
-        return [a, b][n];
+    if (n === 0 || n === 1)
+        return n;
 
     for (let i = 2; i <= n; ++i)
         [a, b] = [b, a + b];
@@ -19,11 +19,10 @@ function fibonacci(n) {
 
 function factorial(n) {
     let mul = 1;
-    if (n === 0)
-        return 1;
 
-    for (let i = 1; i <= n; ++i)
-        mul *= i
+    if (n !== 0)
+        for (let i = 1; i <= n; ++i)
+            mul *= i
 
     return mul;
 }
@@ -102,10 +101,10 @@ if (process.argv[2] === "server") {
 }
 
 
-module.exports.listen = function () {
+exports.listen = function () {
     this.server.listen.apply(this.server, arguments);
 };
 
-module.exports.close = function (callback) {
+exports.close = function (callback) {
     this.server.close(callback);
 };
