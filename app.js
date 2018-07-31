@@ -3,7 +3,6 @@ const url = require('url');
 const fs = require('fs');
 const path = require('path');
 const {promisify} = require('util');
-const readFile = promisify(fs.readFile);
 
 const hostname = '127.0.0.1';
 const port = 3000;
@@ -58,7 +57,7 @@ const downloadFile = async(srvUrl, res) => {
         '.html': 'text/html',
     }[extName] || 'text/plain';
 
-    await readFile(filePath)
+    await promisify(fs.readFile)(filePath)
     .then(content => {
         res.writeHead(200, {'Content-Type': contentType});
         res.end(content, 'utf8');
@@ -142,7 +141,7 @@ this.server = http.createServer(async(req, res) => {
                 break;
 
             case '/download':
-                await downloadFile(srvUrl, res);
+                await downloadFile(fsrvUrl, res);
                 break;
 
             case '/favicon.ico':
@@ -164,18 +163,37 @@ this.server = http.createServer(async(req, res) => {
     }
 });
 
-
-if (process.argv[2] === "server") {
-    this.server.listen(port, hostname, () => {
-        console.log(`Server running at http://${hostname}:${port}/`);
-    });
-} else if (process.argv[2] in ['fibonacci', 'factorial']) {
-    try {
-        console.log(getResult(process.argv[2], parseInt(process.argv[3], 10)));
-    } catch (e) {
-        // let [code, message] = getErrorReaction(e);
-        console.error(e.stack);
+try {
+    switch (process.argv[2]) {
+        case 'server':
+            this.server.listen(port, hostname, () => {
+                console.log(`Server running at http://${hostname}:${port}/`);
+            });
+            break;
+        case 'fibonacci':
+        case 'factorial':
+            console.log(getResult(process.argv[2], parseInt(process.argv[3], 10)));
+            break;
+        case 'view':
+            const rootDir = path.resolve(__dirname, 'public');
+            let filePath = path.join(rootDir, process.argv[3]);
+            if (filePath.indexOf(rootDir) !== 0) {
+                throw URIError('Directory traversal');
+            }
+            promisify(fs.readFile)(filePath)
+                .then(content => {
+                    console.log(content.toString());
+                })
+                .catch(error => {
+                    console.error(error);
+                });
+            break;
+        default:
+            console.log('Argument function is not specified');
     }
+} catch (e) {
+    // let [code, message] = getErrorReaction(e);
+    console.error(e.stack);
 }
 
 
