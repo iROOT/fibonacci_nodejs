@@ -3,9 +3,42 @@ const url = require('url');
 const fs = require('fs');
 const path = require('path');
 const {promisify} = require('util');
+const {Transform} = require('stream');
 
 const hostname = '127.0.0.1';
 const port = 3000;
+
+
+const logLevels = ['debug', 'warn', 'info', 'error'];
+
+function Logger(stream) {
+    this._stream = stream;
+}
+
+logLevels.forEach(function(level){
+    Logger.prototype[level] = function(...args) {
+        this._stream.write({
+            level: level,
+            args: args,
+        });
+    };
+});
+
+
+const transform = new Transform({objectMode: true});
+
+transform._transform = function(data, encoding, cb) {
+    const timestamp = new Date().toLocaleString();
+    const level = data.level.toUpperCase();
+    const message = data.args.join(' ');
+
+    cb(null, `${timestamp} [${level}] ${message}\n`);
+};
+
+transform.pipe(fs.createWriteStream('history.log', {flags: 'a'}));
+transform.pipe(process.stdout);
+
+const logger = new Logger(transform);
 
 
 function fibonacci(n) {
@@ -34,7 +67,7 @@ function factorial(n) {
     return mul;
 }
 
-const downloadFile = async(srvUrl, res) => {
+async function downloadFile(srvUrl, res) {
     let filePath;
     if (typeof srvUrl.query === 'object' && 'file' in srvUrl.query) {
         const rootDir = path.resolve(__dirname, 'public');
@@ -58,15 +91,18 @@ const downloadFile = async(srvUrl, res) => {
     }[extName] || 'text/plain';
 
     await promisify(fs.readFile)(filePath)
-    .then(content => {
-        res.writeHead(200, {'Content-Type': contentType});
-        res.end(content, 'utf8');
-    });
-};
+        .then(content => {
+            res.writeHead(200, {'Content-Type': contentType});
+            res.end(content);
+        })
+        .catch(e => {
+            logger.error(e.stack);
+        });
+}
 
 function getResult(funcName, n) {
     if (!Number.isInteger(n)) {
-        throw TypeError;
+        throw TypeError("Input value is not integer");
     } else if (n < 0) {
         throw RangeError("Input value is negative");
     }
@@ -116,14 +152,10 @@ function getErrorReaction(e) {
 }
 
 this.server = http.createServer(async(req, res) => {
-    if (req.url === '/favicon.ico') {
-        res.writeHead(200, {'Content-Type': 'image/x-icon'});
-        res.end();
-        return;
-    }
-
     try {
         const srvUrl = url.parse(req.url, true);
+
+        logger.info(req.method, req.url);
 
         switch (srvUrl.pathname) {
             case '/fibonacci':
@@ -131,7 +163,7 @@ this.server = http.createServer(async(req, res) => {
                 if (typeof srvUrl.query === 'object' && 'i' in srvUrl.query) {
                     const n = parseInt(srvUrl.query['i'], 10);
 
-                    const result = getResult(srvUrl.pathname.slice(1), n).toString();
+                    const result = await getResult(srvUrl.pathname.slice(1), n).toString();
 
                     res.writeHead(200, {'Content-Type': 'text/plain'});
                     res.end(result);
@@ -152,14 +184,14 @@ this.server = http.createServer(async(req, res) => {
             default:
                 res.writeHead(404, {'Content-Type': 'text/plain'});
                 res.end('404 Page not found\n');
+                logger.error(404, 'Page not found');
         }
     } catch (e) {
-        // let {code, message} = getErrorReaction(e.name);
-        let message = `${e.stack}`;
+        let {code, message} = getErrorReaction(e.name);
 
         res.writeHead(code, {'Content-Type': 'text/plain'});
-        res.end(message);
-        console.error(message);
+        res.end(e.stack);
+        logger.error(`\n${e.stack}`);
     }
 });
 
@@ -167,7 +199,7 @@ try {
     switch (process.argv[2]) {
         case 'server':
             this.server.listen(port, hostname, () => {
-                console.log(`Server running at http://${hostname}:${port}/`);
+                logger.info(`Server running at http://${hostname}:${port}/`);
             });
             break;
         case 'fibonacci':
@@ -185,15 +217,15 @@ try {
                     console.log(content.toString());
                 })
                 .catch(error => {
-                    console.error(error);
+                    logger.error(error);
                 });
             break;
         default:
-            console.log('Argument function is not specified');
+            logger.warn('Argument function is not specified');
     }
 } catch (e) {
     // let [code, message] = getErrorReaction(e);
-    console.error(e.stack);
+    logger.error(e.stack);
 }
 
 
