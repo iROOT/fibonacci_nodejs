@@ -2,8 +2,7 @@ const http = require('http');
 const url = require('url');
 const fs = require('fs');
 const path = require('path');
-const {promisify} = require('util');
-const {Transform} = require('stream');
+const {PassThrough} = require('stream');
 
 const hostname = '127.0.0.1';
 const port = 3000;
@@ -17,29 +16,19 @@ function Logger(stream) {
 
 logLevels.forEach(function(level){
     Logger.prototype[level] = function(...args) {
-        this._stream.write({
-            level: level,
-            args: args,
-        });
-    };
+        const timestamp = new Date().toLocaleString();
+        const message = args.join(' ');
+        const str = `${timestamp} [${level.toUpperCase()}] ${message}\n`;
+
+        this._stream.write(str);
+    }
 });
 
+const pass = new PassThrough();
+pass.pipe(fs.createWriteStream('history.log', {flags: 'a'}));
+// pass.pipe(process.stderr);
 
-const transform = new Transform({objectMode: true});
-
-transform._transform = function(data, encoding, cb) {
-    const timestamp = new Date().toLocaleString();
-    const level = data.level.toUpperCase();
-    const message = data.args.join(' ');
-
-    cb(null, `${timestamp} [${level}] ${message}\n`);
-};
-
-transform.pipe(fs.createWriteStream('history.log', {flags: 'a'}));
-transform.pipe(process.stdout);
-
-const logger = new Logger(transform);
-
+const logger = new Logger(pass);
 
 function fibonacci(n) {
     let a = 0, b = 1;
@@ -79,25 +68,19 @@ async function downloadFile(srvUrl, res) {
         throw URIError("File path is not specified");
     }
 
-    let extName = path.extname(filePath);
-    let contentType = {
-        '.js': 'text/javascript',
-        '.css': 'text/css',
-        '.json': 'application/json',
-        '.png': 'image/png',
-        '.jpg': 'image/jpg',
-        '.txt': 'text/plain',
-        '.html': 'text/html',
-    }[extName] || 'text/plain';
+    let file = fs.createReadStream(filePath);
 
-    await promisify(fs.readFile)(filePath)
-        .then(content => {
-            res.writeHead(200, {'Content-Type': contentType});
-            res.end(content);
-        })
-        .catch(e => {
-            logger.error(e.stack);
-        });
+    res.writeHead(200,
+        {'Content-Type': 'application/octet-stream',
+         'Content-Disposition': `attachment; filename="${path.basename(filePath)}"`});
+
+    file.pipe(res);
+
+    await new Promise((resolve, reject) => {
+        file.on('error', reject)
+            .on('end', resolve);
+        res.on('close', file.destroy);
+    });
 }
 
 function getResult(funcName, n) {
@@ -173,7 +156,7 @@ this.server = http.createServer(async(req, res) => {
                 break;
 
             case '/download':
-                await downloadFile(fsrvUrl, res);
+                await downloadFile(srvUrl, res);
                 break;
 
             case '/favicon.ico':
@@ -195,38 +178,46 @@ this.server = http.createServer(async(req, res) => {
     }
 });
 
-try {
-    switch (process.argv[2]) {
-        case 'server':
-            this.server.listen(port, hostname, () => {
-                logger.info(`Server running at http://${hostname}:${port}/`);
-            });
-            break;
-        case 'fibonacci':
-        case 'factorial':
-            console.log(getResult(process.argv[2], parseInt(process.argv[3], 10)));
-            break;
-        case 'view':
-            const rootDir = path.resolve(__dirname, 'public');
-            let filePath = path.join(rootDir, process.argv[3]);
-            if (filePath.indexOf(rootDir) !== 0) {
-                throw URIError('Directory traversal');
-            }
-            promisify(fs.readFile)(filePath)
-                .then(content => {
-                    console.log(content.toString());
-                })
-                .catch(error => {
-                    logger.error(error);
+(async() => {
+    try {
+        logger.info('Console arguments:', process.argv.join(' '));
+
+        switch (process.argv[2]) {
+            case 'server':
+                this.server.listen(port, hostname, () => {
+                    logger.info(`Server running at http://${hostname}:${port}/`);
                 });
-            break;
-        default:
-            logger.warn('Argument function is not specified');
+                break;
+            case 'fibonacci':
+            case 'factorial':
+                const result = getResult(process.argv[2], parseInt(process.argv[3], 10))
+                console.log(result);
+                logger.debug('Printed result', result)
+                break;
+            case 'view':
+                const rootDir = path.resolve(__dirname, 'public');
+                let filePath = path.join(rootDir, process.argv[3]);
+                if (filePath.indexOf(rootDir) !== 0) {
+                    throw URIError('Directory traversal');
+                }
+                let file = fs.createReadStream(filePath);
+
+                file.pipe(process.stdout);
+
+                await new Promise((resolve, reject) => {
+                    file.on('error', reject)
+                        .on('end', resolve);
+                });
+                logger.debug('File printed:', filePath);
+                break;
+            default:
+                logger.warn('Argument function is not specified');
+        }
+    } catch (e) {
+        // let [code, message] = getErrorReaction(e);
+        logger.error(e.stack);
     }
-} catch (e) {
-    // let [code, message] = getErrorReaction(e);
-    logger.error(e.stack);
-}
+})();
 
 
 exports.listen = function () {
