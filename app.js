@@ -134,7 +134,7 @@ function getErrorReaction(e) {
     };
 }
 
-this.server = http.createServer(async(req, res) => {
+const server = http.createServer(async(req, res) => {
     try {
         const srvUrl = url.parse(req.url, true);
 
@@ -170,11 +170,11 @@ this.server = http.createServer(async(req, res) => {
                 logger.error(404, 'Page not found');
         }
     } catch (e) {
-        let {code, message} = getErrorReaction(e.name);
+        let {code, message} = getErrorReaction(e);
 
         res.writeHead(code, {'Content-Type': 'text/plain'});
         res.end(e.stack);
-        logger.error(`\n${e.stack}`);
+        logger.error(`${e.stack}`);
     }
 });
 
@@ -184,7 +184,7 @@ this.server = http.createServer(async(req, res) => {
 
         switch (process.argv[2]) {
             case 'server':
-                this.server.listen(port, hostname, () => {
+                server.listen(port, hostname, () => {
                     logger.info(`Server running at http://${hostname}:${port}/`);
                 });
                 break;
@@ -219,11 +219,10 @@ this.server = http.createServer(async(req, res) => {
     }
 })();
 
-
-exports.listen = function () {
-    this.server.listen.apply(this.server, arguments);
+exports.listen = (...args) => {
+    server.listen(...args);
 };
 
-exports.close = function (callback) {
-    this.server.close(callback);
+exports.close = (callback) => {
+    server.close(callback);
 };
