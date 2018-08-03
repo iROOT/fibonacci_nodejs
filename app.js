@@ -2,7 +2,6 @@ const http = require('http');
 const url = require('url');
 const fs = require('fs');
 const path = require('path');
-const {PassThrough} = require('stream');
 
 const hostname = '127.0.0.1';
 const port = 3000;
@@ -20,15 +19,12 @@ logLevels.forEach(function(level){
         const message = args.join(' ');
         const str = `${timestamp} [${level.toUpperCase()}] ${message}\n`;
 
+        // process.stderr.write(str);
         this._stream.write(str);
     }
 });
 
-const pass = new PassThrough();
-pass.pipe(fs.createWriteStream('history.log', {flags: 'a'}));
-// pass.pipe(process.stderr);
-
-const logger = new Logger(pass);
+const logger = new Logger(fs.createWriteStream('history.log', {flags: 'a'}));
 
 function fibonacci(n) {
     let a = 0, b = 1;
