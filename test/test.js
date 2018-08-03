@@ -1,17 +1,7 @@
-const server = require('../app'),
+const server = require('../http-api'),
     {describe, before, after, it} = require('mocha'),
     assert = require('assert'),
     http = require('http');
-
-describe('server', function () {
-    before(function () {
-        server.listen(8000);
-    });
-
-    after(function () {
-        server.close();
-    });
-});
 
 describe('/', function () {
     before(function () {
