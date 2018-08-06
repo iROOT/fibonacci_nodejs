@@ -1,4 +1,5 @@
 const server = require('../http-api'),
+    core = require('../core'),
     {describe, before, after, it} = require('mocha'),
     assert = require('assert'),
     request = require('request'),
@@ -17,144 +18,87 @@ describe('/', () => {
         server.close();
     });
 
-    it('should return code 400', (done) => {
-        Promise.all([
-            request.get(`${DOMAIN}/fibonacci?i=-100`, (err, res, body) => {
-                assert.equal(res.statusCode, 400);
-            }),
-            request.get(`${DOMAIN}/factorial?i=-100`, (err, res, body) => {
-                assert.equal(res.statusCode, 400);
-            })
-        ]).then(done());
+    const modes = [testCore, testCli, testHttp];
+
+    function testCore(name, test, done) {
+        assert.equal(core.getResult(name, test.in), test.out);
+        done();
+    }
+
+    function testCli(name, test, done) {
+        spawn('node', ['console-api.js', name, test.in])
+            .stdout.on('data', (res) => {
+            assert.equal(res, test.out);
+            done();
+        })
+    }
+
+    function testHttp(name, test, done) {
+        request.get(`${DOMAIN}/${name}?i=${test.in}`, (err, res, body) => {
+            assert.equal(body, test.out);
+            done();
+        });
+    }
+
+    function testFunc(name, mode, test) {
+        it (`${name} ${test.in} should return ${test.out}`, (done) => {
+            mode(name, test, done);
+        });
+    }
+
+    function testExceptions(name) {
+        [
+            {args: -100, expected: RangeError},
+            {args: -10, expected: RangeError},
+            {args: -1, expected: RangeError},
+            {args: 'abc', expected: TypeError},
+        ].forEach((test) => {
+            it(`${name} ${test.args} should return ${test.expected.name}`, () => {
+                assert.throws(() => {core.getResult(name, test.args)}, test.expected)
+            });
+        });
+    }
+
+    describe('fibonacci', () => {
+        const name = 'fibonacci';
+
+        modes.forEach(mode => {
+            describe(mode.name, () => {
+                [
+                    {in: 0, out: 0},
+                    {in: 1, out: 1},
+                    {in: 2, out: 1},
+                    {in: 3, out: 2},
+                    {in: 10, out: 55},
+                    {in: 500, out: 1.394232245616977e+104},
+                    {in: 1476, out: 1.3069892237633987e+308},
+                    {in: 1477, out: Infinity},
+                ].forEach(test => {testFunc(name, mode, test)});
+            });
+        });
+
+        describe('exception', () => {testExceptions(name)});
     });
 
-    it('should return code 500', (done) => {
-        Promise.all([
-            request.get(`${DOMAIN}/fibonacci?i=abc`, (err, res, body) => {
-                assert.equal(res.statusCode, 500);
-            }),
-            request.get(`${DOMAIN}/factorial?i=abc`, (err, res, body) => {
-                assert.equal(res.statusCode, 500);
-            })
-        ]).then(done());
-    });
+    describe('factorial', () => {
+        const name = 'factorial';
 
+        modes.forEach(mode => {
+            describe(mode.name, () => {
+                [
+                    {in: 0, out: 1},
+                    {in: 1, out: 1},
+                    {in: 2, out: 2},
+                    {in: 3, out: 6},
+                    {in: 5, out: 120},
+                    {in: 10, out: 3628800},
+                    {in: 50, out: 3.0414093201713376e+64},
+                    {in: 170, out: 7.257415615307994e+306},
+                    {in: 171, out: Infinity},
+                ].forEach(test => {testFunc(name, mode, test)});
+            });
+        });
 
-    it('Fibonacci 0 should return 0', (done) => {
-        Promise.all([
-            request.get(`${DOMAIN}/fibonacci?i=0`, (err, res, body) => {
-                assert.equal(res.statusCode, 200);
-                assert.equal(body, '0');
-            }),
-            spawn('node', ['console-api.js', 'factorial', '0'])
-                .stdout.on('data', (res) => {
-                assert.equal(res, '0');
-            })
-        ]).then(done());
-    });
-
-    it('Fibonacci 1 should return 1', (done) => {
-        Promise.all([
-            request.get(`${DOMAIN}/fibonacci?i=1`, (err, res, body) => {
-                assert.equal(res.statusCode, 200);
-                assert.equal(body, '1');
-            }),
-            spawn('node', ['console-api.js', 'factorial', '1'])
-                .stdout.on('data', (res) => {
-                assert.equal(res, '1');
-            })
-        ]).then(done());
-    });
-
-    it('Fibonacci 2 should return 1', (done) => {
-        Promise.all([
-            request.get(`${DOMAIN}/fibonacci?i=2`, (err, res, body) => {
-                assert.equal(res.statusCode, 200);
-                assert.equal(body, '1');
-            }),
-            spawn('node', ['console-api.js', 'factorial', '2'])
-                .stdout.on('data', (res) => {
-                assert.equal(res, '1');
-            })
-        ]).then(done());
-    });
-
-    it('Fibonacci 3 should return 2', (done) => {
-        Promise.all([
-            request.get(`${DOMAIN}/fibonacci?i=3`, (err, res, body) => {
-                assert.equal(res.statusCode, 200);
-                assert.equal(body, '2');
-            }),
-            spawn('node', ['console-api.js', 'factorial', '3'])
-                .stdout.on('data', (res) => {
-                assert.equal(res, '2');
-            })
-        ]).then(done());
-    });
-
-    it('Fibonacci 10 should return 55', (done) => {
-        Promise.all([
-            request.get(`${DOMAIN}/fibonacci?i=10`, (err, res, body) => {
-                assert.equal(res.statusCode, 200);
-                assert.equal(body, '55');
-            }),
-            spawn('node', ['console-api.js', 'factorial', '10'])
-                .stdout.on('data', (res) => {
-                assert.equal(res, '55');
-            })
-        ]).then(done());
-    });
-
-    it('Fibonacci 1476 should return 1.3069892237633987e+308', (done) => {
-        Promise.all([
-            request.get(`${DOMAIN}/fibonacci?i=1476`, (err, res, body) => {
-                assert.equal(res.statusCode, 200);
-                assert.equal(body, '1.3069892237633987e+308');
-            }),
-            spawn('node', ['console-api.js', 'factorial', '1476'])
-                .stdout.on('data', (res) => {
-                assert.equal(res, '1');
-            })
-        ]).then(done());
-    });
-
-    it('Fibonacci 1477 should return Infinity', (done) => {
-        Promise.all([
-            request.get(`${DOMAIN}/fibonacci?i=1477`, (err, res, body) => {
-                assert.equal(res.statusCode, 200);
-                assert.equal(body, 'Infinity');
-            }),
-            spawn('node', ['console-api.js', 'factorial', '1477'])
-                .stdout.on('data', (res) => {
-                assert.equal(res, 'Infinity');
-            })
-        ]).then(done());
-    });
-
-
-    it('Factorial 5 should return 55', (done) => {
-        Promise.all([
-            request.get(`${DOMAIN}/factorial?i=5`, (err, res, body) => {
-                assert.equal(res.statusCode, 200);
-                assert.equal(body, '120');
-            }),
-            spawn('node', ['console-api.js', 'factorial', '5'])
-                .stdout.on('data', (res) => {
-                assert.equal(res, '120');
-            })
-        ]).then(done());
-    });
-
-    it('Factorial 20 should return 2432902008176640000', (done) => {
-        Promise.all([
-            request.get(`${DOMAIN}/factorial?i=20`, (err, res, body) => {
-                assert.equal(res.statusCode, 200);
-                assert.equal(body, '2432902008176640000');
-            }),
-            spawn('node', ['console-api.js', 'factorial', '20'])
-                .stdout.on('data', (res) => {
-                assert.equal(res, '2432902008176640000');
-            })
-        ]).then(done());
+        describe('exception', () => {testExceptions(name)});
     });
 });

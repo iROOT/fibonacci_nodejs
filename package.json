@@ -4,7 +4,7 @@
   "main": "app.js",
   "private": true,
   "scripts": {
-    "start": "node app.js server",
+    "start": "node console-api.js server",
     "test": "node ./node_modules/mocha/bin/mocha"
   },
   "devDependencies": {
