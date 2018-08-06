@@ -6,8 +6,8 @@ const logger = require('./logger');
 const core = require('./core');
 
 
-const hostname = '127.0.0.1';
-const port = 3000;
+const HOSTNAME = '127.0.0.1';
+const PORT = 3000;
 
 
 (async() => {
@@ -16,8 +16,8 @@ const port = 3000;
 
         switch (process.argv[2]) {
             case 'server':
-                server.listen(port, hostname, () => {
-                    logger.info(`Server running at http://${hostname}:${port}/`);
+                server.listen(PORT, HOSTNAME, () => {
+                    logger.info(`Server running at http://${HOSTNAME}:${PORT}/`);
                 });
                 break;
             case 'fibonacci':
