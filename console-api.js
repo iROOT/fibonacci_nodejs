@@ -1,52 +1,50 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require('fs')
+const path = require('path')
 
-const server = require('./http-api');
-const logger = require('./logger');
-const core = require('./core');
+const server = require('./http-api')
+const logger = require('./logger')
+const core = require('./core')
 
-
-const HOSTNAME = '127.0.0.1';
+const HOSTNAME = '127.0.0.1'
 const PORT = 3000;
 
-
-(async() => {
+(async () => {
     try {
-        logger.info('Console arguments:', process.argv.join(' '));
+        logger.info('Console arguments:', process.argv.join(' '))
 
         switch (process.argv[2]) {
             case 'server':
                 server.listen(PORT, HOSTNAME, () => {
-                    logger.info(`Server running at http://${HOSTNAME}:${PORT}/`);
-                });
-                break;
+                    logger.info(`Server running at http://${HOSTNAME}:${PORT}/`)
+                })
+                break
             case 'fibonacci':
             case 'factorial':
-                const result = core.getResult(process.argv[2], parseInt(process.argv[3], 10));
-                console.log(result);
-                logger.debug('Printed result', result);
-                break;
+                const result = core.getResult(process.argv[2], parseInt(process.argv[3], 10))
+                console.log(result)
+                logger.debug('Printed result', result)
+                break
             case 'view':
-                const rootDir = path.resolve(__dirname, 'public');
-                let filePath = path.join(rootDir, process.argv[3]);
+                const rootDir = path.resolve(__dirname, 'public')
+                let filePath = path.join(rootDir, process.argv[3])
                 if (filePath.indexOf(rootDir) !== 0) {
-                    throw URIError('Directory traversal');
+                    throw URIError('Directory traversal')
                 }
-                let file = fs.createReadStream(filePath);
+                let file = fs.createReadStream(filePath)
 
-                file.pipe(process.stdout);
+                file.pipe(process.stdout)
 
                 await new Promise((resolve, reject) => {
                     file.on('error', reject)
-                        .on('end', resolve);
-                });
-                logger.debug('File printed:', filePath);
-                break;
+                        .on('end', resolve)
+                })
+                logger.debug('File printed:', filePath)
+                break
             default:
-                logger.warn('Argument function is not specified');
+                logger.warn('Argument function is not specified')
         }
     } catch (e) {
         // let [code, message] = getErrorReaction(e);
-        logger.error(e.stack);
+        logger.error(e.stack)
     }
-})();
+})()
