@@ -18,6 +18,10 @@ async function downloadFile (srvUrl, res) {
         throw URIError('File path is not specified')
     }
 
+    if (!fs.existsSync(filePath)) {
+        throw URIError('No such file or directory')
+    }
+
     let file = fs.createReadStream(filePath)
 
     res.writeHead(200,
@@ -71,38 +75,22 @@ const server = http.createServer(async (req, res) => {
                 logger.error(404, 'Page not found')
         }
     } catch (e) {
-        let {code, message} = getErrorReaction(e)
+        e.code = getErrorReaction(e)
 
-        res.writeHead(code, {'Content-Type': 'text/plain'})
-        res.end(e.stack)
+        res.writeHead(e.code, {'Content-Type': 'text/plain'})
+        res.end(e.message)
         logger.error(`${e.stack}`)
     }
 })
 
-function getErrorReaction (e) {
-    let res = {
-        'RangeError': {
-            code: 400,
-            message: 'Input value is negative'
-        },
-        'URIError': {
-            code: 404,
-            message: 'Function not found'
-        },
-        'TypeError': {
-            code: 500,
-            message: 'Invalid function argument'
-        },
-        'ENOENT': {
-            code: 404,
-            message: 'File not found'
-        }
-    }
 
-    return res[e.name] || {
-        code: 500,
-        message: ''
-    }
+function getErrorReaction (e) {
+    return {
+        'RangeError': 400,
+        'URIError': 404,
+        'TypeError': 500,
+        'ENOENT': 404,
+    }[e.name] || 500
 }
 
 exports.listen = (...args) => {
@@ -112,4 +100,3 @@ exports.listen = (...args) => {
 exports.close = (callback) => {
     server.close(callback)
 }
-

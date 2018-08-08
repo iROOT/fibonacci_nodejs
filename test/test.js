@@ -1,12 +1,25 @@
 const server = require('../http-api'),
     core = require('../core'),
+    consoleApi = require('../console-api.js'),
     {describe, before, after, it} = require('mocha'),
     assert = require('assert'),
     request = require('request'),
-    {spawn} = require('child_process')
+    fs = require('fs'),
+    {Writable} = require('stream')
 
 const PORT = 8000
 const DOMAIN = `http://localhost:${PORT}`
+
+function hookStdout(callback) {
+    const oldStream = process.stdout
+
+    process.stdout = new Writable();
+    process.stdout.write = callback
+
+    return () => {
+        process.stdout = oldStream
+    }
+}
 
 describe('/', () => {
     before(() => {
@@ -25,11 +38,12 @@ describe('/', () => {
     }
 
     function testCli (name, test, done) {
-        spawn('node', ['console-api.js', name, test.in])
-            .stdout.on('data', (res) => {
+        const unhook = hookStdout((res) => {
             assert.equal(res, test.out)
             done()
         })
+        consoleApi(name, test.in)
+        unhook()
     }
 
     function testHttp (name, test, done) {
@@ -99,5 +113,60 @@ describe('/', () => {
         })
 
         describe('exception', () => {testExceptions(name)})
+    })
+
+    describe('download', () => {
+        it('Check Download file', (done) => {
+            request.get(`${DOMAIN}/download?file=test.txt`, (err, res, body) => {
+                if (err) {
+                    throw err
+                } else {
+                    assert.equal(body, fs.readFileSync(`${__dirname}/../public/test.txt`))
+                    done()
+                }
+            })
+        })
+
+        it('Check Directory traversal', (done) => {
+            request.get(`${DOMAIN}/download?file=../test.txt`, (err, res, body) => {
+                if (err) {
+                    throw err
+                } else {
+                    assert.equal(res.statusCode, 404)
+                    assert.equal(body, 'Directory traversal')
+                    done()
+                }
+            })
+        })
+
+        it('Check No such file or directory', (done) => {
+            request.get(`${DOMAIN}/download?file=hello.txt`, (err, res, body) => {
+                if (err) {
+                    throw err
+                } else {
+                    assert.equal(res.statusCode, 404)
+                    assert.equal(body, 'No such file or directory')
+                    done()
+                }
+            })
+        })
+
+        it('Check File path is not specified', (done) => {
+            request.get(`${DOMAIN}/download`, (err, res, body) => {
+                if (err) {
+                    throw err
+                } else {
+                    assert.equal(res.statusCode, 404)
+                    assert.equal(body, 'File path is not specified')
+                    done()
+                }
+            })
+        })
+    })
+
+    describe('view', () => {
+        it('view should return same file', (done) => {
+            testCli('view', {in: 'test.txt', out: fs.readFileSync(`${__dirname}/../public/test.txt`).toString()}, done)
+        })
     })
 })
