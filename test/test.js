@@ -5,21 +5,10 @@ const server = require('../http-api'),
     assert = require('assert'),
     request = require('request'),
     fs = require('fs'),
-    {Writable} = require('stream')
+    hookStdio = require('../hook-stdio')
 
 const PORT = 8000
 const DOMAIN = `http://localhost:${PORT}`
-
-function hookStdout(callback) {
-    const oldStream = process.stdout
-
-    process.stdout = new Writable();
-    process.stdout.write = callback
-
-    return () => {
-        process.stdout = oldStream
-    }
-}
 
 describe('/', () => {
     before(() => {
@@ -38,7 +27,7 @@ describe('/', () => {
     }
 
     function testCli (name, test, done) {
-        const unhook = hookStdout((res) => {
+        const unhook = hookStdio('stdout', (res) => {
             assert.equal(res, test.out)
             done()
         })
