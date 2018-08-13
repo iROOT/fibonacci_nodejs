@@ -8,7 +8,8 @@
     "test": "node ./node_modules/mocha/bin/mocha"
   },
   "devDependencies": {
-    "mocha": "^5.2.0"
+    "mocha": "^5.2.0",
+    "nyc": "^12.0.2"
   },
   "dependencies": {
     "request": "^2.87.0"

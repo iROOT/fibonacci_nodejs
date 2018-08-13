@@ -27,9 +27,13 @@ describe('/', () => {
     }
 
     function testCli (name, test, done) {
-        const unhook = hookStdio('stdout', (res) => {
-            assert.equal(res, test.out)
-            done()
+        const unhook = hookStdio.hookStdio('stdout', (res) => {
+            try {
+                assert.equal(res, test.out)
+                done()
+            } catch (e) {
+                done(e)
+            }
         })
         consoleApi(name, test.in)
         unhook()
@@ -108,7 +112,7 @@ describe('/', () => {
         it('Check Download file', (done) => {
             request.get(`${DOMAIN}/download?file=test.txt`, (err, res, body) => {
                 if (err) {
-                    throw err
+                    done(err)
                 } else {
                     assert.equal(body, fs.readFileSync(`${__dirname}/../public/test.txt`))
                     done()
@@ -119,7 +123,7 @@ describe('/', () => {
         it('Check Directory traversal', (done) => {
             request.get(`${DOMAIN}/download?file=../test.txt`, (err, res, body) => {
                 if (err) {
-                    throw err
+                    done(err)
                 } else {
                     assert.equal(res.statusCode, 404)
                     assert.equal(body, 'Directory traversal')
@@ -131,7 +135,7 @@ describe('/', () => {
         it('Check No such file or directory', (done) => {
             request.get(`${DOMAIN}/download?file=hello.txt`, (err, res, body) => {
                 if (err) {
-                    throw err
+                    done(err)
                 } else {
                     assert.equal(res.statusCode, 404)
                     assert.equal(body, 'No such file or directory')
@@ -143,7 +147,7 @@ describe('/', () => {
         it('Check File path is not specified', (done) => {
             request.get(`${DOMAIN}/download`, (err, res, body) => {
                 if (err) {
-                    throw err
+                    done(err)
                 } else {
                     assert.equal(res.statusCode, 404)
                     assert.equal(body, 'File path is not specified')
@@ -156,6 +160,75 @@ describe('/', () => {
     describe('view', () => {
         it('view should return same file', (done) => {
             testCli('view', {in: 'test.txt', out: fs.readFileSync(`${__dirname}/../public/test.txt`).toString()}, done)
+        })
+    })
+
+    describe('Exceptions', () => {
+        it('Check exception getResult', (done) => {
+            assert.throws(() => {core.getResult('test', 0)}, URIError)
+            done()
+        })
+
+        it('Check incorrect argument', (done) => {
+            request.get(`${DOMAIN}/fibonacci`, (err, res, body) => {
+                if (err) {
+                    done(err)
+                } else {
+                    assert.equal(res.statusCode, 500)
+                    assert.equal(body, 'Invalid function argument')
+                    done()
+                }
+            })
+        })
+
+        it('Check view directory traversal', (done) => {
+            const unhook = hookStdio.hookLogger('error', (res) => {
+                try {
+                    assert.equal(res.split('\n')[0], 'URIError: Directory traversal')
+                } catch (e) {
+                    done (e)
+                }
+                done()
+            })
+            consoleApi('view', '../test.txt')
+            unhook()
+        })
+
+        it('Check console-api without arguments', (done) => {
+            const unhook = hookStdio.hookLogger('warn', (res) => {
+                try {
+                    assert.equal(res, 'Argument function is not specified')
+                    done()
+                } catch (e) {
+                    done(e)
+                }
+            })
+            consoleApi()
+            unhook()
+        })
+
+        it('Check favicon.ico', (done) => {
+            request.get(`${DOMAIN}/favicon.ico`, (err, res) => {
+                if (err) {
+                    done(err)
+                } else {
+                    assert.equal(res.statusCode, 200)
+                    assert.equal(res.headers['content-type'], 'image/x-icon')
+                    done()
+                }
+            })
+        })
+
+        it('Check 404', (done) => {
+            request.get(`${DOMAIN}/unknown`, (err, res, body) => {
+                if (err) {
+                    done(err)
+                } else {
+                    assert.equal(res.statusCode, 404)
+                    assert.equal(body, '404 Page not found\n')
+                    done()
+                }
+            })
         })
     })
 })

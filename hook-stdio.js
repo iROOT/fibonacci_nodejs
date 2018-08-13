@@ -1,8 +1,9 @@
 const {Writable} = require('stream')
+const logger = require('./logger')
 
 const hookStdio = (name, cb) => {
-    const hookWrite = (data) => {
-        cb(data)
+    const hookWrite = (chunk) => {
+        cb(chunk)
     }
 
     const originalWrite = process[name].write
@@ -24,4 +25,16 @@ const hookStdio = (name, cb) => {
     }
 }
 
-module.exports = hookStdio
+const hookLogger = ((name, cb) => {
+    const originalLogFunc = logger[name]
+    logger[name] = (chunk) => {
+        cb(chunk)
+    }
+    return () => {
+        logger[name] = originalLogFunc
+    }
+})
+
+module.exports.hookStdio = hookStdio
+
+module.exports.hookLogger = hookLogger
