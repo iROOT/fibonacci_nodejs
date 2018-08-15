@@ -1,6 +1,5 @@
 const http = require('http')
 const url = require('url')
-const fs = require('fs')
 const path = require('path')
 
 const logger = require('./logger')
@@ -10,28 +9,16 @@ const HOSTNAME = '127.0.0.1'
 const PORT = 3000
 
 async function downloadFile (srvUrl, res) {
-    let filePath
-    if (typeof srvUrl.query === 'object' && 'file' in srvUrl.query) {
-        const rootDir = path.resolve(__dirname, 'public')
-        filePath = path.join(rootDir, srvUrl.query['file'])
-        if (filePath.indexOf(rootDir) !== 0) {
-            throw URIError('Directory traversal')
-        }
-    } else {
+    if (typeof srvUrl.query !== 'object' || !('file' in srvUrl.query)) {
         throw URIError('File path is not specified')
     }
+    let filePath, file
+    [filePath, file] = core.getFile(srvUrl.query['file'])
 
-    if (!fs.existsSync(filePath)) {
-        throw URIError('No such file or directory')
-    }
-
-    let file = fs.createReadStream(filePath)
-
-    res.writeHead(200,
-        {
-            'Content-Type': 'application/octet-stream',
-            'Content-Disposition': `attachment; filename="${path.basename(filePath)}"`
-        })
+    res.writeHead(200, {
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${path.basename(filePath)}"`
+    })
 
     file.pipe(res)
 
@@ -85,7 +72,6 @@ const server = http.createServer(async (req, res) => {
         logger.error(`${e.stack}`)
     }
 })
-
 
 function getErrorReaction (e) {
     return {

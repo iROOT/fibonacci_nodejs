@@ -1,3 +1,6 @@
+const fs = require('fs')
+const path = require('path')
+
 function fibonacci (n) {
     let a = 0, b = 1
 
@@ -22,6 +25,20 @@ function factorial (n) {
     }
 
     return mul
+}
+
+function getFileStream (filePath) {
+    const rootDir = path.resolve(__dirname, 'public')
+    filePath = path.join(rootDir, filePath)
+    if (filePath.indexOf(rootDir) !== 0) {
+        throw URIError('Directory traversal')
+    }
+
+    if (!fs.existsSync(filePath)) {
+        throw URIError('No such file or directory')
+    }
+
+    return [filePath, fs.createReadStream(filePath)]
 }
 
 function getResult (funcName, n) {
@@ -49,4 +66,7 @@ function getResult (funcName, n) {
     }
 }
 
-exports.getResult = getResult
+module.exports = {
+    getResult: getResult,
+    getFile: getFileStream
+}

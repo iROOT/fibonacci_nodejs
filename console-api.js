@@ -1,6 +1,3 @@
-const fs = require('fs')
-const path = require('path')
-
 const logger = require('./logger')
 const core = require('./core')
 
@@ -16,12 +13,8 @@ const main = async (...args) => {
                 logger.debug('Printed result', result)
                 break
             case 'view':
-                const rootDir = path.resolve(__dirname, 'public')
-                let filePath = path.join(rootDir, args[1])
-                if (filePath.indexOf(rootDir) !== 0) {
-                    throw URIError('Directory traversal')
-                }
-                let file = fs.createReadStream(filePath)
+                let filePath, file
+                [filePath, file] = core.getFile(args[1])
 
                 file.pipe(process.stdout)
 
