@@ -6,6 +6,9 @@ const path = require('path')
 const logger = require('./logger')
 const core = require('./core')
 
+const HOSTNAME = '127.0.0.1'
+const PORT = 3000
+
 async function downloadFile (srvUrl, res) {
     let filePath
     if (typeof srvUrl.query === 'object' && 'file' in srvUrl.query) {
@@ -91,6 +94,12 @@ function getErrorReaction (e) {
         'TypeError': 500,
         'ENOENT': 404,
     }[e.name] || 500
+}
+
+if (require.main === module) {
+    server.listen(PORT, HOSTNAME, () => {
+        logger.info(`Server running at http://${HOSTNAME}:${PORT}/`)
+    })
 }
 
 exports.listen = (...args) => {
