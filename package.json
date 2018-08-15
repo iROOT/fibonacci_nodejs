@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "start": "node console-api.js server",
-    "test": "node ./node_modules/mocha/bin/mocha"
+    "test": "node ./node_modules/mocha/bin/mocha",
+    "coverage": "node ./node_modules/nyc/bin/nyc mocha"
   },
   "devDependencies": {
     "mocha": "^5.2.0",
