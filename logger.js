@@ -15,10 +15,6 @@ logLevels.forEach(function (level) {
         // process.stderr.write(str);
         this._stream.write(str)
     }
-
-    exports[level] = (...args) => {
-        logger[level](...args)
-    }
 })
 
-const logger = new Logger(fs.createWriteStream('history.log', {flags: 'a'}))
+module.exports = new Logger(fs.createWriteStream('history.log', {flags: 'a'}))
