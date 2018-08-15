@@ -1,9 +1,10 @@
 language: node_js
 node_js:
   - 'node'
-  - 'lts/*'
   - '8'
 install:
+  - npm install -g codecov
   - npm install
 script:
-  - npm test
+  - node ./node_modules/nyc/bin/nyc --reporter=text-lcov ./node_modules/mocha/bin/mocha > coverage.lcov
+  - codecov
