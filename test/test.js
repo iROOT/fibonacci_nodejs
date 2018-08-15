@@ -30,13 +30,14 @@ describe('/', () => {
         const unhook = hookStdio.hookStdio('stdout', (res) => {
             try {
                 assert.equal(res, test.out)
+                unhook()
                 done()
             } catch (e) {
+                unhook()
                 done(e)
             }
         })
         consoleApi(name, test.in)
-        unhook()
     }
 
     function testHttp (name, test, done) {
@@ -185,26 +186,28 @@ describe('/', () => {
             const unhook = hookStdio.hookLogger('error', (res) => {
                 try {
                     assert.equal(res.split('\n')[0], 'URIError: Directory traversal')
+                    unhook()
+                    done()
                 } catch (e) {
-                    done (e)
+                    unhook()
+                    done(e)
                 }
-                done()
             })
             consoleApi('view', '../test.txt')
-            unhook()
         })
 
         it('Check console-api without arguments', (done) => {
             const unhook = hookStdio.hookLogger('warn', (res) => {
                 try {
                     assert.equal(res, 'Argument function is not specified')
+                    unhook()
                     done()
                 } catch (e) {
+                    unhook()
                     done(e)
                 }
             })
             consoleApi()
-            unhook()
         })
 
         it('Check favicon.ico', (done) => {
